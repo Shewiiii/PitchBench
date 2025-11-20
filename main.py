@@ -1,13 +1,14 @@
 import os
 import sys
 import logging
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 import httpx
 import json
 import matplotlib.pyplot as plt
 
-from consts import PROMPT, SOLUTION, MODELS, RESULTS_FILE
+from consts import PROMPT, SOLUTION, MODELS
+from data_structure import Model, models, parse_results_file
 import asyncio
 
 load_dotenv()
@@ -22,27 +23,6 @@ logging.basicConfig(
 )
 
 
-def score(
-    proposition: Dict[str, str], model: str, solution: Dict[str, str] = SOLUTION
-) -> int:
-    if len(proposition) != len(solution):
-        logging.warning(
-            f"{model}: Length of proposition and solution are different: {len(proposition)} vs {len(solution)}"
-        )
-
-    s = 0
-    for index, expected in solution.items():
-        answer = proposition.get(index)
-        if answer == expected:
-            s += 1
-            continue
-        if expected.startswith("[") and expected.endswith("]"):  # Example: [A;N4]
-            options = expected[1:-1].split(";")
-            if answer in options: # Guess a pitch accent within multiple choices
-                s += 0.5
-    return s
-
-
 def dict_of_proposition_array(
     proposition_array: list[dict[str, str]],
 ) -> dict[str, str]:
@@ -54,7 +34,7 @@ def dict_of_proposition_array(
 
 
 async def query_openrouter(
-    models: List[str] = MODELS,
+    model_names: List[str] = MODELS,
     prompt: str = PROMPT,
     overwrite_past_results: bool = False,
 ) -> Dict[str, Dict[str, Any]]:
@@ -89,31 +69,27 @@ async def query_openrouter(
             },
         },
     }
-    if RESULTS_FILE.exists() and not overwrite_past_results:
-        with open(RESULTS_FILE, "r", encoding="utf-8") as f:
-            results = json.load(f)
-    else:
-        results = {}
 
     async with httpx.AsyncClient(timeout=60) as client:
 
-        async def fetch_model(model: str) -> None:
-            if model in results:
-                proposition: dict[str, str] = results[model].get("proposition")
+        async def fetch_model(model_name: str) -> None:
+            if model_name in models.dico:
+                proposition: dict[str, str] = models.dico[model_name].proposition
                 if proposition:
                     logging.info(
-                        f"Proposition from {model} got from json file: {results[model]['proposition']}"
+                        f"Proposition from {model_name} got from json file: {proposition}"
                     )
                     return
                 logging.info(
-                    f"Existing proposition for {model} empty in json file, requerying."
+                    f"Existing proposition for {model_name} empty in json file, requerying."
                 )
-            logging.info(f"Requesting a solution to {model}.")
+            logging.info(f"Requesting a solution to {model_name}.")
             payload = {
-                "model": model,
+                "model": model_name,
                 "messages": [{"role": "user", "content": prompt}],
                 "response_format": response_format,
             }
+
             try:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
@@ -122,7 +98,7 @@ async def query_openrouter(
                 )
                 response.raise_for_status()
             except httpx.HTTPError as exc:
-                logging.error(f"Could not call OpenRouter for {model}: {exc}")
+                logging.error(f"Could not call OpenRouter for {model_name}: {exc}")
                 return
 
             payload_json = response.json()
@@ -140,18 +116,19 @@ async def query_openrouter(
                     "proposition": {},
                 }
 
-            results[model] = {
-                "details": parsed.get("details", ""),
-                "proposition": parsed["proposition"],
-                "completion_tokens": completion_tokens,
-            }
-            logging.info(
-                f"Proposition from {model} got: {results[model]['proposition']}"
+            model = Model(
+                model_name,
+                parsed.get("details"),
+                parsed.get("proposition"),
+                completion_tokens,
             )
+            
+            logging.info(f"Proposition from {model} got: {model.proposition}")
 
-        await asyncio.gather(*(fetch_model(model) for model in models))
+        await asyncio.gather(*(fetch_model(name) for name in model_names))
 
     logging.info("Saving the results in results.json.")
+    results = {model.name: model.to_dict() for model in models.dico.values()}
     json_results = json.dumps(results, ensure_ascii=False, indent=2)
     with open("results.json", "w", encoding="utf-8") as f:
         f.write(json_results)
@@ -159,26 +136,9 @@ async def query_openrouter(
     return results
 
 
-def plot_results(results: Optional[Dict[str, Dict[str, str]]] = None) -> None:
-    if not results:
-        if not RESULTS_FILE.exists():
-            logging.warning("No results to plot.")
-            return
-        with open(RESULTS_FILE, "r", encoding="utf-8") as f:
-            results = json.load(f)
-
-    score_data = [
-        (
-            model,
-            score(values.get("proposition", {}), model),
-        )
-        for model, values in results.items()
-    ]
-    token_data = [
-        (model, values.get("completion_tokens")) for model, values in results.items()
-    ]
-    scores_sorted = sorted(score_data, key=lambda x: x[1], reverse=True)
-    tokens_sorted = sorted(token_data, key=lambda x: x[1], reverse=False)
+def plot_results() -> None:
+    score_data = models.get_models_score()
+    token_data = models.get_models_completion_tokens()
 
     def plot_metric(sorted_data: List[tuple], title: str, color: str) -> None:
         labels = [item[0] for item in sorted_data]
@@ -224,13 +184,14 @@ def plot_results(results: Optional[Dict[str, Dict[str, str]]] = None) -> None:
         plt.tight_layout()
         plt.show()
 
-    plot_metric(scores_sorted, f"Scores (out of {len(SOLUTION)})", "#4ade80")
-    plot_metric(tokens_sorted, "Token usage", "#60a5fa")
+    plot_metric(score_data, f"Scores (out of {len(SOLUTION)})", "#4ade80")
+    plot_metric(token_data, "Token usage", "#60a5fa")
 
 
 async def main() -> None:
-    results = await query_openrouter()
-    plot_results(results)
+    parse_results_file()
+    # results = await query_openrouter()
+    plot_results()
 
 
 if __name__ == "__main__":
