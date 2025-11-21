@@ -74,15 +74,7 @@ async def query_openrouter(
 
         async def fetch_model(model_name: str) -> None:
             if model_name in models.dico:
-                proposition: dict[str, str] = models.dico[model_name].proposition
-                if proposition:
-                    logging.info(
-                        f"Proposition from {model_name} got from json file: {proposition}"
-                    )
-                    return
-                logging.info(
-                    f"Existing proposition for {model_name} empty in json file, requerying."
-                )
+                logging.info(f"Existing proposition for {model_name} in json file.")
             logging.info(f"Requesting a solution to {model_name}.")
             payload = {
                 "model": model_name,
@@ -109,31 +101,22 @@ async def query_openrouter(
                 parsed = json.loads(data.get("content", "{}"))
                 # Convert proposition to the right format
                 # Array is supported by Sonnet 4.5 and GPT 5.1, but not object (dict) directly
-                parsed["proposition"] = dict_of_proposition_array(parsed["proposition"])
-            except (json.JSONDecodeError, TypeError):
-                parsed = {
-                    "details": data.get("content", ""),
-                    "proposition": {},
-                }
+                proposition = dict_of_proposition_array(parsed["proposition"])
+            except (json.JSONDecodeError, TypeError) :
+                proposition = {}
 
-            model = Model(
-                model_name,
-                parsed.get("details"),
-                parsed.get("proposition"),
-                completion_tokens,
-            )
-            
+            if model_name not in models.dico:
+                model = Model(model_name)
+            model.add_score(proposition, completion_tokens)
+
             logging.info(f"Proposition from {model} got: {model.proposition}")
 
         await asyncio.gather(*(fetch_model(name) for name in model_names))
 
     logging.info("Saving the results in results.json.")
-    results = {model.name: model.to_dict() for model in models.dico.values()}
-    json_results = json.dumps(results, ensure_ascii=False, indent=2)
-    with open("results.json", "w", encoding="utf-8") as f:
-        f.write(json_results)
+    models.save_to_file()
 
-    return results
+    return models.to_dict() # TEMP
 
 
 def plot_results() -> None:
@@ -189,7 +172,7 @@ def plot_results() -> None:
 
 
 async def main() -> None:
-    parse_results_file()
+    models.parse_results_file()
     # results = await query_openrouter()
     plot_results()
 
