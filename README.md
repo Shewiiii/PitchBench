@@ -24,10 +24,6 @@ In a prompt, 30 japanese words are provided, and the model is asked to return th
 
 Limitation to tackle: Way too random. The benchmark needs to be run multiple times to get a better idea of the model's performance. 
 
-## To do
-- Implement multi-shot prompting to improve accuracy.
-- (Potentially) Add more words to the benchmark.
-
-## Results (one shot)
+## Results
 ![Scores](scores.png)
 ![Token usage](token_usage.png)
