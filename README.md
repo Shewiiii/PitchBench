@@ -22,7 +22,6 @@ In a prompt, 30 japanese words are provided, and the model is asked to return th
 - 0.5 is awarded if the model guessed a correct pattern within multiple possible answers. 
 - 0 is awarded if the model makes a wrong guess or guesses too many accents for a single word.
 
-Limitation to tackle: Way too random. The benchmark needs to be run multiple times to get a better idea of the model's performance. 
 
 ## Results
 ![Scores](scores.png)
