@@ -1,14 +1,15 @@
 import os
 import sys
 import logging
-from typing import List, Dict, Any
+
+from typing import List
 from dotenv import load_dotenv
 import httpx
 import json
 import matplotlib.pyplot as plt
 
 from consts import PROMPT, SOLUTION, MODELS
-from data_structure import Model, models, parse_results_file
+from data_structure import Model, models
 import asyncio
 
 load_dotenv()
@@ -36,8 +37,7 @@ def dict_of_proposition_array(
 async def query_openrouter(
     model_names: List[str] = MODELS,
     prompt: str = PROMPT,
-    overwrite_past_results: bool = False,
-) -> Dict[str, Dict[str, Any]]:
+) -> None:
     headers = {
         "Authorization": f"Bearer {OPEN_ROUTER_API_KEY}",
         "HTTP-Referer": "https://openrouter.ai",
@@ -102,30 +102,44 @@ async def query_openrouter(
                 # Convert proposition to the right format
                 # Array is supported by Sonnet 4.5 and GPT 5.1, but not object (dict) directly
                 proposition = dict_of_proposition_array(parsed["proposition"])
-            except (json.JSONDecodeError, TypeError) :
+            except (json.JSONDecodeError, TypeError) as e:
+                logging.error(f"{model_name}: {e}")
                 proposition = {}
 
-            if model_name not in models.dico:
-                model = Model(model_name)
-            model.add_score(proposition, completion_tokens)
+            if len(proposition) == 0:
+                logging.warning(f"The model did not answer: {model_name}.")
+                return
 
-            logging.info(f"Proposition from {model} got: {model.proposition}")
+            if model_name not in models.dico:
+                Model(model_name)
+
+            logging.info(f"Proposition from {model_name} got.")
+            models.dico[model_name].add_score(proposition, completion_tokens)
 
         await asyncio.gather(*(fetch_model(name) for name in model_names))
 
     logging.info("Saving the results in results.json.")
     models.save_to_file()
 
-    return models.to_dict() # TEMP
-
 
 def plot_results() -> None:
-    score_data = models.get_models_score()
-    token_data = models.get_models_completion_tokens()
+    score_data = models.get_models_avg_score()
+    token_data = models.get_models_avg_tokens()
 
-    def plot_metric(sorted_data: List[tuple], title: str, color: str) -> None:
-        labels = [item[0] for item in sorted_data]
-        values = [item[1] for item in sorted_data]
+    names_score = [f"{d[0]} (n={d[3]})" for d in score_data]
+    values_score = [d[1] for d in score_data]
+    cis_score = [d[2] for d in score_data]
+
+    names_token = [f"{d[0]} (n={d[2]})" for d in token_data]
+    values_token = [d[1] for d in token_data]
+
+    def plot_metric(
+        labels: List[str],
+        values: List[float],
+        title: str,
+        color: str,
+        xerr: List[float] = None,
+    ) -> None:
         if not any(values):
             logging.warning(f"No non-zero {title.lower()}.")
             return
@@ -135,12 +149,17 @@ def plot_results() -> None:
             figsize=(10, max(2, 0.6 * len(labels))), facecolor="black"
         )
         ax.set_facecolor("black")
+
         bars = ax.barh(
             y_positions,
             values,
+            xerr=xerr,
             color=color,
             edgecolor="#1f2933",
+            capsize=5 if xerr else 0,
+            error_kw={"ecolor": "white"},
         )
+
         ax.invert_yaxis()
         ax.set_yticks(y_positions)
         ax.set_yticklabels(labels, color="white")
@@ -150,15 +169,23 @@ def plot_results() -> None:
         ax.set_title(title, color="white", pad=15)
 
         max_val = max(values)
+        if xerr:
+            max_val += max(xerr)
+
         margin = max(1, int(0.05 * max_val))
         ax.set_xlim(0, max_val + margin)
 
-        for bar in bars:
+        for i, bar in enumerate(bars):
             width = bar.get_width()
+            label_text = f"{width:.2f}"
+
+            # Calculate position: if xerr exists, place text after the error bar
+            text_x = width + margin * 0.02 + (xerr[i]+0.3 if xerr else 0)
+
             ax.text(
-                width + margin * 0.02,
+                text_x,
                 bar.get_y() + bar.get_height() / 2,
-                f"{width}",
+                label_text,
                 va="center",
                 ha="left",
                 color="white",
@@ -167,13 +194,19 @@ def plot_results() -> None:
         plt.tight_layout()
         plt.show()
 
-    plot_metric(score_data, f"Scores (out of {len(SOLUTION)})", "#4ade80")
-    plot_metric(token_data, "Token usage", "#60a5fa")
+    plot_metric(
+        names_score,
+        values_score,
+        f"Scores (out of {len(SOLUTION)})",
+        "#4ade80",
+        xerr=cis_score,
+    )
+    plot_metric(names_token, values_token, "Token usage", "#60a5fa")
 
 
 async def main() -> None:
     models.parse_results_file()
-    # results = await query_openrouter()
+    # await query_openrouter()
     plot_results()
 
 

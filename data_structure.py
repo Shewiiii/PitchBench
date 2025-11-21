@@ -3,6 +3,8 @@ from typing import Dict, Union, List, Tuple
 import logging
 from pathlib import Path
 import json
+import statistics
+import math
 
 from consts import SOLUTION
 
@@ -12,13 +14,14 @@ class Model:
     name: str
     scores: list[float] = field(default_factory=list)
     completions_tokens: list[int] = field(default_factory=list)
-    run_count: int = 0
-    avg_score: float = 0
-    avg_token_usage: float = 0
+    avg_score: float = field(init=False)
+    ci_score: float = field(init=False)
+    avg_token_usage: float = field(init=False)
+    run_count: int = field(init=False)
 
     def __post_init__(self) -> None:
         models.add_model(self)
-        self.calculate_avgerages()
+        self.update_variables()
 
     def __repr__(self) -> str:
         return f"Model class of {self.name}: ({self.avg_score},{self.avg_token_usage})"
@@ -30,13 +33,25 @@ class Model:
             "run_count": self.run_count,
         }
 
-    def calculate_avgerages(self) -> None:
+    def update_variables(self) -> None:
+        self.run_count = len(self.scores)
         if self.scores:
             self.avg_score = round(sum(self.scores) / len(self.scores), 2)
+            if self.run_count > 1:
+                stdev = statistics.stdev(self.scores)
+                self.ci_score = 1.96 * stdev / math.sqrt(self.run_count)
+            else:
+                self.ci_score = 0.0
+        else:
+            self.avg_score = 0.0
+            self.ci_score = 0.0
+
         if self.completions_tokens:
-            self.avg_token_usage = (
-                f"{sum(self.completions_tokens) // len(self.completions_tokens):.2f}"
+            self.avg_token_usage = round(
+                sum(self.completions_tokens) / len(self.completions_tokens), 2
             )
+        else:
+            self.avg_token_usage = 0.0
 
     def add_score(
         self,
@@ -62,29 +77,39 @@ class Model:
 
         self.scores.append(s)
         self.completions_tokens.append(completion_tokens)
-        self.calculate_avgerages()
-        self.run_count += 1
+        self.update_variables()
 
 
 @dataclass
 class Models:
     dico: Dict[str, Model] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Dict[str, Union[List[float], List[int], int]]]:
         return {model.name: model.to_dict() for model in models.dico.values()}
 
     def add_model(self, model: Model) -> None:
         self.dico[model.name] = model
 
-    def get_models_avg_score(self) -> List[Tuple[str, int]]:
-        scores = [(name, model.avg_score) for name, model in self.dico.items()]
+    def get_models_avg_score(self) -> List[Tuple[str, float, float, int]]:
+        scores = [
+            (name, model.avg_score, model.ci_score, model.run_count)
+            for name, model in self.dico.items()
+        ]
         return sorted(scores, key=lambda x: x[1], reverse=True)
 
-    def get_models_avg_tokens(self) -> List[Tuple[str, int]]:
-        tokens = [(name, model.avg_token_usage) for name, model in self.dico.items()]
+    def get_models_avg_tokens(self) -> List[Tuple[str, float, int]]:
+        tokens = [
+            (name, model.avg_token_usage, model.run_count)
+            for name, model in self.dico.items()
+        ]
         return sorted(tokens, key=lambda x: x[1], reverse=False)
 
-    def parse_results_file(path: Path = Path("./results.json")) -> Dict[str, Model]:
+    def get_run_counts(self) -> List[Tuple[str, int]]:
+        return [(name, model.run_count) for name, model in self.dico.items()]
+
+    def parse_results_file(
+        self, path: Path = Path("./results.json")
+    ) -> Dict[str, Model]:
         if not path.exists():
             logging.info("No results file has been found.")
             return
@@ -99,13 +124,13 @@ class Models:
                 if not (scores or completions_tokens or run_count):
                     continue
 
-                Model(name, scores, completions_tokens, run_count)
+                Model(name, scores, completions_tokens)
 
         return models
 
     def save_to_file(self, path: Path = Path("./results.json")) -> None:
         with open(path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(self.to_dict()))
+            f.write(json.dumps(self.to_dict(), indent=4))
 
 
 models = Models()
