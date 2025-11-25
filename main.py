@@ -206,7 +206,7 @@ def plot_results() -> None:
 
 async def main() -> None:
     models.parse_results_file()
-    # await query_openrouter()
+    await query_openrouter()
     plot_results()
 
 

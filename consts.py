@@ -58,6 +58,7 @@ MODELS = [
     "google/gemini-2.5-pro",
     "google/gemini-2.5-flash",
     "anthropic/claude-sonnet-4.5",
+    "anthropic/claude-opus-4.5"
     "moonshotai/kimi-k2-thinking",
     "moonshotai/kimi-k2-0905",
     "deepseek/deepseek-chat-v3-0324",
