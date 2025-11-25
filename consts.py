@@ -54,22 +54,24 @@ def _build_solution_map(solution_text: str) -> Dict[int, str]:
 
 SOLUTION = _build_solution_map(SOLUTION_STRING)
 MODELS = [
-    "google/gemini-3-pro-preview",
-    "google/gemini-2.5-pro",
-    "google/gemini-2.5-flash",
-    "anthropic/claude-sonnet-4.5",
-    "anthropic/claude-opus-4.5"
-    "moonshotai/kimi-k2-thinking",
-    "moonshotai/kimi-k2-0905",
-    "deepseek/deepseek-chat-v3-0324",
-    "deepseek/deepseek-r1-0528",
-    "openai/gpt-5.1",
-    "openai/gpt-5.1-chat",
-    "openai/gpt-5",
-    "openai/gpt-5-chat",
-    "openai/gpt-5-mini",
-    "openai/gpt-4o",
-    "x-ai/grok-4",
-    "x-ai/grok-4-fast",
+    # "google/gemini-3-pro-preview",
+    # "google/gemini-2.5-pro",
+    # "google/gemini-2.5-flash",
+    # "anthropic/claude-sonnet-4.5",
+    # "anthropic/claude-opus-4.5"
+    # "moonshotai/kimi-k2-thinking",
+    # "moonshotai/kimi-k2-0905",
+    # "deepseek/deepseek-chat-v3-0324",
+    # "deepseek/deepseek-r1-0528",
+    # "openai/gpt-5.1",
+    # "openai/gpt-5.1-chat",
+    # "openai/gpt-5",
+    # "openai/gpt-5-chat",
+    # "openai/gpt-5-mini",
+    # "openai/gpt-4o",
+    # "mistralai/mistral-nemo",
+    "x-ai/grok-4.1-fast",
+    # "x-ai/grok-4",
+    # "x-ai/grok-4-fast",
 ]
 RESULTS_FILE = Path("./results.json")
