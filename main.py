@@ -38,6 +38,9 @@ async def query_openrouter(
     model_names: List[str] = MODELS,
     prompt: str = PROMPT,
 ) -> None:
+    if not models.parsed_file:
+        models.parse_results_file()
+
     headers = {
         "Authorization": f"Bearer {OPEN_ROUTER_API_KEY}",
         "HTTP-Referer": "https://openrouter.ai",
@@ -180,7 +183,7 @@ def plot_results() -> None:
             label_text = f"{width:.2f}"
 
             # Calculate position: if xerr exists, place text after the error bar
-            text_x = width + margin * 0.02 + (xerr[i]+0.3 if xerr else 0)
+            text_x = width + margin * 0.02 + (xerr[i] + 0.3 if xerr else 0)
 
             ax.text(
                 text_x,
@@ -205,8 +208,8 @@ def plot_results() -> None:
 
 
 async def main() -> None:
-    models.parse_results_file()
-    await query_openrouter()
+    for _ in range(int(input("Number of runs: "))):
+        await query_openrouter()
     plot_results()
 
 

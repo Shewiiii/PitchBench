@@ -83,6 +83,7 @@ class Model:
 @dataclass
 class Models:
     dico: Dict[str, Model] = field(default_factory=dict)
+    parsed_file: bool = False
 
     def to_dict(self) -> Dict[str, Dict[str, Union[List[float], List[int], int]]]:
         return {model.name: model.to_dict() for model in models.dico.values()}
@@ -113,7 +114,8 @@ class Models:
         if not path.exists():
             logging.info("No results file has been found.")
             return
-
+        
+        self.parsed_file = True
         with open(path, "r", encoding="utf-8") as f:
             raw_results: Dict[str, Dict[Union[int, str, Dict[str, str]]]] = json.load(f)
             for name, values in raw_results.items():
