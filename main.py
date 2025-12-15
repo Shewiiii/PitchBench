@@ -208,8 +208,11 @@ def plot_results() -> None:
 
 
 async def main() -> None:
-    for _ in range(int(input("Number of runs: "))):
+    c = int(input("Number of runs: "))
+    for _ in range(c):
         await query_openrouter()
+    if c == 0:
+        models.parse_results_file()
     plot_results()
 
 
