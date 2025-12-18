@@ -73,6 +73,7 @@ MODELS = [
     # "x-ai/grok-4.1-fast",
     # "x-ai/grok-4",
     # "x-ai/grok-4-fast",
-    "openai/gpt-5.2"
+    # "openai/gpt-5.2"
+    "google/gemini-3-flash-preview"
 ]
 RESULTS_FILE = Path("./results.json")
