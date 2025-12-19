@@ -19,7 +19,7 @@ Even if you have low confidence, give a best-effort answer from memory/knowledge
 6. 変わる
 7. 資産
 8. 明治
-9. 於く
+9. 勤める
 10. 唯
 11. 走る
 12. 姿
@@ -42,7 +42,7 @@ Even if you have low confidence, give a best-effort answer from memory/knowledge
 29. する
 30. 三十
 31. 的
-32. として
+32. とする
 33. そして
 34. 英語
 35. 生まれる
@@ -63,7 +63,7 @@ Even if you have low confidence, give a best-effort answer from memory/knowledge
 50. 違い
 """
 
-SOLUTION_STRING = "A,[A;H],N,H,H,H,[H;A],A,[A;H],A,N,A,[H;O],A,N,A,O,H,H,[A;H],N,H,A,H,A,A,H,[A;H],H,A,H,N,H,H,H,O,H,H,[H;A],A,A,[N;A],H,H,H,H,N,[N;H],A,H"  # No space
+SOLUTION_STRING = "A,[A;H],N,H,H,H,[H;A],A,N,A,N,A,[H;O],A,N,A,O,H,H,[A;H],N,H,A,H,A,A,H,[A;H],H,A,H,N,H,H,H,O,H,H,[H;A],A,A,[N;A],H,H,H,H,N,[N;H],A,H"  # No space
 
 
 def _build_solution_map(solution_text: str) -> Dict[int, str]:
