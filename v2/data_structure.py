@@ -6,7 +6,7 @@ import json
 import statistics
 import math
 
-from consts import SOLUTION
+from consts import SOLUTION, RESULTS_FILE
 
 
 @dataclass
@@ -116,7 +116,7 @@ class Models:
         return [(name, model.run_count) for name, model in self.dico.items()]
 
     def parse_results_file(
-        self, path: Path = Path("./v2/results.json")
+        self, path: Path = RESULTS_FILE
     ) -> Dict[str, Model]:
         if not path.exists():
             logging.info("No results file has been found.")
@@ -138,7 +138,7 @@ class Models:
 
         return models
 
-    def save_to_file(self, path: Path = Path("./v2/results.json")) -> None:
+    def save_to_file(self, path: Path = RESULTS_FILE) -> None:
         if not path.parent.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
 
