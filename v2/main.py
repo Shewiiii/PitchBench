@@ -204,7 +204,7 @@ def plot_results() -> None:
     plot_metric(
         names_score,
         values_score,
-        f"Success Rate (%) ({len(SOLUTION)} questions, Random = 25%)",
+        f"Success Rate (%) ({len(SOLUTION)} questions, Random = 29%)",
         "#4ade80",
         xerr=cis_score,
         suffix="%",
