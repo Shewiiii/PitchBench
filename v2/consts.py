@@ -73,7 +73,8 @@ def _build_solution_map(solution_text: str) -> Dict[int, str]:
 
 SOLUTION = _build_solution_map(SOLUTION_STRING)
 MODELS = [
-    "google/gemini-3-pro-preview",
+    # "google/gemini-3-pro-preview",
+    "google/gemini-3.1-pro-preview",
     # "google/gemini-3-flash-preview",
     # "google/gemini-2.5-pro",
     # "google/gemini-2.5-flash",
@@ -85,9 +86,9 @@ MODELS = [
     # "deepseek/deepseek-r1-0528",
     # "openai/gpt-5.2",
     # "openai/gpt-5.2-chat",
-    "openai/gpt-5.1",
+    # "openai/gpt-5.1",
     # "openai/gpt-5.1-chat",
-    "openai/gpt-5",
+    # "openai/gpt-5",
     # "openai/gpt-5-chat",
     # "openai/gpt-5-mini",
     # "openai/gpt-4o",
